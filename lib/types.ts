@@ -19,9 +19,13 @@ export interface ToolSummary {
   suggestions?: number;
   acceptances?: number;
   activeUsers?: number;
+  // GitHub identity when authenticated via gh CLI
+  ghLogin?: string;
   daily: DayBucket[];
   lastFetchedAt: string; // ISO string
   error?: string;
+  // Informational note (shown in UI but not treated as an error)
+  info?: string;
 }
 
 export interface CacheEntry<T> {

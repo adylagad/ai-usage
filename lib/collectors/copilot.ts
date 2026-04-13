@@ -34,7 +34,7 @@ function getGhLogin(): string | null {
 async function fetchPersonalUsage(
   login: string,
   token: string
-): Promise<{ daily: DayBucket[]; totalRequests: number; totalCostUsd: number; topModel?: string } | null> {
+): Promise<{ daily: DayBucket[]; totalRequests: number; totalCostUsd: number; topModel?: string } | "not_found" | null> {
   const res = await fetch(
     `https://api.github.com/users/${login}/settings/billing/premium_request/usage`,
     {
@@ -45,6 +45,8 @@ async function fetchPersonalUsage(
       },
     }
   );
+  // 404 = endpoint not available for this account type (org-managed Copilot, etc.)
+  if (res.status === 404) return "not_found";
   if (!res.ok) return null;
 
   const json = await res.json();
@@ -100,8 +102,8 @@ export async function fetchSummary(_days: number): Promise<ToolSummary> {
     totalCostUsd: 0,
   };
 
-  // Auto-detect gh CLI token — zero setup required
   const ghToken = getGhToken();
+  const ghLogin = ghToken ? getGhLogin() : null;
   const orgToken = process.env.GITHUB_TOKEN ?? ghToken;
   const org = process.env.GITHUB_ORG;
 
@@ -111,39 +113,67 @@ export async function fetchSummary(_days: number): Promise<ToolSummary> {
       configured: false,
       daily: [],
       lastFetchedAt: new Date().toISOString(),
-      error: "Run `gh auth login` to enable Copilot tracking",
     };
   }
 
   // Try personal billing with gh token
-  if (ghToken) {
-    const login = getGhLogin();
-    if (login) {
-      const personal = await fetchPersonalUsage(login, ghToken);
-      if (personal) {
-        return {
-          ...base,
-          label: "GitHub Copilot",
-          configured: true,
-          totalOutputTokens: personal.totalRequests,
-          totalCostUsd: personal.totalCostUsd,
-          topModel: personal.topModel,
-          daily: personal.daily,
-          lastFetchedAt: new Date().toISOString(),
-        };
+  if (ghToken && ghLogin) {
+    const personal = await fetchPersonalUsage(ghLogin, ghToken);
+
+    if (personal && personal !== "not_found") {
+      return {
+        ...base,
+        configured: true,
+        ghLogin,
+        totalOutputTokens: personal.totalRequests,
+        totalCostUsd: personal.totalCostUsd,
+        topModel: personal.topModel,
+        daily: personal.daily,
+        lastFetchedAt: new Date().toISOString(),
+      };
+    }
+
+    // 404: authenticated but Copilot is org-managed or billing API not available
+    // Still show as connected — try org metrics next, or show connected with a note
+    if (personal === "not_found") {
+      if (orgToken && org) {
+        const metrics = await fetchOrgMetrics(orgToken, org);
+        if (metrics) {
+          const daily: DayBucket[] = (metrics.breakdown ?? []).map((d) => ({
+            date: d.date, inputTokens: 0, outputTokens: 0, costUsd: 0,
+          }));
+          return {
+            ...base,
+            label: "GitHub Copilot (Org)",
+            configured: true,
+            ghLogin,
+            suggestions: metrics.total_suggestions_count ?? 0,
+            acceptances: metrics.total_acceptances_count ?? 0,
+            activeUsers: metrics.total_active_users ?? 0,
+            daily,
+            lastFetchedAt: new Date().toISOString(),
+          };
+        }
       }
+
+      // Connected but billing data not accessible via this token
+      return {
+        ...base,
+        configured: true,
+        ghLogin,
+        daily: [],
+        lastFetchedAt: new Date().toISOString(),
+        info: "Connected as @" + ghLogin + ". Usage data requires a personal Copilot plan or org admin access.",
+      };
     }
   }
 
-  // Fall back to org metrics
+  // No gh token, try org metrics only
   if (orgToken && org) {
     const metrics = await fetchOrgMetrics(orgToken, org);
     if (metrics) {
       const daily: DayBucket[] = (metrics.breakdown ?? []).map((d) => ({
-        date: d.date,
-        inputTokens: 0,
-        outputTokens: 0,
-        costUsd: 0,
+        date: d.date, inputTokens: 0, outputTokens: 0, costUsd: 0,
       }));
       return {
         ...base,
@@ -160,11 +190,10 @@ export async function fetchSummary(_days: number): Promise<ToolSummary> {
 
   return {
     ...base,
-    configured: true,
+    configured: !!ghToken,
+    ghLogin: ghLogin ?? undefined,
     daily: [],
     lastFetchedAt: new Date().toISOString(),
-    error: ghToken
-      ? "No Copilot plan found on this account. Make sure you have an active Copilot subscription."
-      : `Could not fetch org metrics for '${org}'.`,
+    error: org ? `Could not fetch org metrics for '${org}'.` : undefined,
   };
 }

@@ -22,6 +22,38 @@ function fmtCost(n: number): string {
   return `$${n.toFixed(2)}`;
 }
 
+function CopilotDetail({ tool }: { tool: ToolSummary }) {
+  // Personal plan: premium request count
+  if (tool.totalOutputTokens > 0) {
+    return (
+      <p className="text-xs text-muted-foreground mt-1">
+        {tool.totalOutputTokens.toLocaleString()} premium requests
+        {tool.totalCostUsd > 0 && ` · $${tool.totalCostUsd.toFixed(2)}`}
+      </p>
+    );
+  }
+  // Org plan: suggestions + acceptances
+  if ((tool.suggestions ?? 0) > 0 || (tool.acceptances ?? 0) > 0) {
+    return (
+      <p className="text-xs text-muted-foreground mt-1">
+        {(tool.suggestions ?? 0).toLocaleString()} suggestions
+        {" · "}
+        {(tool.acceptances ?? 0).toLocaleString()} accepted
+        {(tool.activeUsers ?? 0) > 0 && ` · ${tool.activeUsers} users`}
+      </p>
+    );
+  }
+  // Connected but no data available
+  if (tool.ghLogin) {
+    return (
+      <p className="text-xs text-muted-foreground mt-1">
+        @{tool.ghLogin} · no usage data available
+      </p>
+    );
+  }
+  return null;
+}
+
 export function ToolBreakdown({ tools }: { tools: ToolSummary[] }) {
   return (
     <Card>
@@ -46,31 +78,38 @@ export function ToolBreakdown({ tools }: { tools: ToolSummary[] }) {
               <TableRow key={tool.tool}>
                 <TableCell className="font-medium">{tool.label}</TableCell>
                 <TableCell className="text-right font-mono text-sm">
-                  {tool.configured && !tool.error ? fmt(tool.totalInputTokens) : "—"}
+                  {tool.tool === "copilot" ? "—" : tool.configured && !tool.error ? fmt(tool.totalInputTokens) : "—"}
                 </TableCell>
                 <TableCell className="text-right font-mono text-sm">
                   {tool.configured && !tool.error
-                    ? tool.tool === "cursor"
-                      ? `${fmt(tool.totalOutputTokens)} msgs`
-                      : fmt(tool.totalOutputTokens)
+                    ? tool.tool === "copilot"
+                      ? "—"
+                      : tool.tool === "cursor"
+                        ? `${fmt(tool.totalOutputTokens)} msgs`
+                        : fmt(tool.totalOutputTokens)
                     : "—"}
                 </TableCell>
                 <TableCell className="text-right font-mono text-sm">
-                  {tool.configured && !tool.error ? fmtCost(tool.totalCostUsd) : "—"}
+                  {tool.tool === "copilot"
+                    ? tool.totalCostUsd > 0 ? fmtCost(tool.totalCostUsd) : "—"
+                    : tool.configured && !tool.error ? fmtCost(tool.totalCostUsd) : "—"}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground max-w-[160px] truncate">
                   {tool.topModel ?? "—"}
                 </TableCell>
                 <TableCell>
                   <ToolStatusBadge summary={tool} />
-                  {tool.error && (
+                  {tool.tool === "copilot" && tool.configured && (
+                    <CopilotDetail tool={tool} />
+                  )}
+                  {tool.tool !== "copilot" && tool.error && (
                     <p className="text-xs text-destructive mt-1 max-w-[200px] truncate" title={tool.error}>
                       {tool.error}
                     </p>
                   )}
-                  {tool.tool === "copilot" && tool.configured && !tool.error && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {tool.suggestions?.toLocaleString()} suggestions · {tool.acceptances?.toLocaleString()} accepted
+                  {tool.info && (
+                    <p className="text-xs text-muted-foreground mt-1 max-w-[220px]" title={tool.info}>
+                      {tool.info}
                     </p>
                   )}
                 </TableCell>
