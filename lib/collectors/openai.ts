@@ -1,102 +1,156 @@
+import fs from "fs";
+import path from "path";
+import os from "os";
 import { DayBucket, ToolSummary } from "../types";
 
-function isoDate(d: Date): string {
-  return d.toISOString().split("T")[0];
+// Pricing per million tokens (April 2026)
+const PRICING: Record<string, { input: number; output: number; cachedInput: number }> = {
+  "gpt-5.4":      { input: 2.50,  output: 10.00, cachedInput: 1.25 },
+  "gpt-5.4-mini": { input: 0.15,  output:  0.60, cachedInput: 0.075 },
+  "gpt-4o":       { input: 2.50,  output: 10.00, cachedInput: 1.25 },
+  "gpt-4o-mini":  { input: 0.15,  output:  0.60, cachedInput: 0.075 },
+  "o1":           { input: 15.00, output: 60.00, cachedInput: 7.50 },
+  "o3":           { input: 10.00, output: 40.00, cachedInput: 2.50 },
+  "o3-mini":      { input: 1.10,  output:  4.40, cachedInput: 0.55 },
+  "o4-mini":      { input: 1.10,  output:  4.40, cachedInput: 0.55 },
+  "codex-mini":   { input: 1.50,  output:  6.00, cachedInput: 0.375 },
+};
+
+function getPrice(model: string) {
+  for (const [key, price] of Object.entries(PRICING)) {
+    if (model.includes(key)) return price;
+  }
+  return PRICING["gpt-4o"]; // fallback
 }
 
-function daysAgo(n: number): Date {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d;
+function calcCost(usage: {
+  input_tokens?: number;
+  output_tokens?: number;
+  cached_input_tokens?: number;
+}, model: string): number {
+  const p = getPrice(model);
+  const M = 1_000_000;
+  const uncachedInput = (usage.input_tokens ?? 0) - (usage.cached_input_tokens ?? 0);
+  return (
+    (Math.max(0, uncachedInput) / M) * p.input +
+    ((usage.cached_input_tokens ?? 0) / M) * p.cachedInput +
+    ((usage.output_tokens ?? 0) / M) * p.output
+  );
+}
+
+function findJsonlFiles(dir: string): string[] {
+  if (!fs.existsSync(dir)) return [];
+  const entries = fs.readdirSync(dir, { recursive: true, encoding: "utf-8" }) as string[];
+  return entries
+    .filter((e) => e.endsWith(".jsonl") && e.includes("rollout-"))
+    .map((e) => path.join(dir, e));
+}
+
+function readModel(): string {
+  try {
+    const configPath = path.join(os.homedir(), ".codex", "config.toml");
+    const content = fs.readFileSync(configPath, "utf-8");
+    const match = content.match(/^model\s*=\s*"([^"]+)"/m);
+    return match?.[1] ?? "gpt-4o";
+  } catch {
+    return "gpt-4o";
+  }
 }
 
 export async function fetchSummary(days: number): Promise<ToolSummary> {
-  const base: Omit<ToolSummary, "configured" | "daily" | "lastFetchedAt"> = {
-    tool: "openai",
-    label: "OpenAI",
-    totalInputTokens: 0,
-    totalOutputTokens: 0,
-    totalCostUsd: 0,
-  };
+  const sessionsDir = path.join(os.homedir(), ".codex", "sessions");
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return { ...base, configured: false, daily: [], lastFetchedAt: new Date().toISOString() };
-  }
-
-  const startDate = isoDate(daysAgo(days));
-  const endDate = isoDate(new Date());
-
-  const res = await fetch(
-    `https://api.openai.com/v1/organization/usage/completions?start_date=${startDate}&end_date=${endDate}&bucket_width=1d&limit=31`,
-    {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
-
-  if (!res.ok) {
-    const text = await res.text();
+  if (!fs.existsSync(sessionsDir)) {
     return {
-      ...base,
-      configured: true,
+      tool: "openai",
+      label: "OpenAI (Codex CLI)",
+      configured: false,
+      totalInputTokens: 0,
+      totalOutputTokens: 0,
+      totalCostUsd: 0,
       daily: [],
       lastFetchedAt: new Date().toISOString(),
-      error: `OpenAI API error ${res.status}: ${text.slice(0, 200)}`,
+      error: "Codex CLI not found (~/.codex/sessions missing). Install with: npm install -g @openai/codex",
     };
   }
 
-  const json = await res.json();
-  const buckets: Array<{
-    start_time: number;
-    results: Array<{
-      input_tokens?: number;
-      output_tokens?: number;
-      input_cached_tokens?: number;
-      model_id?: string;
-    }>;
-  }> = json.data ?? [];
+  const files = findJsonlFiles(sessionsDir);
+  const defaultModel = readModel();
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
 
   const dailyMap: Record<string, DayBucket> = {};
-  const modelCount: Record<string, number> = {};
 
-  for (const bucket of buckets) {
-    const date = new Date(bucket.start_time * 1000).toISOString().split("T")[0];
-    if (!dailyMap[date]) {
-      dailyMap[date] = { date, inputTokens: 0, outputTokens: 0, costUsd: 0 };
+  for (const file of files) {
+    // Extract date from filename: rollout-YYYY-MM-DDT...
+    const fileDate = path.basename(file).match(/rollout-(\d{4}-\d{2}-\d{2})/)?.[1];
+    if (!fileDate) continue;
+    if (new Date(fileDate) < cutoff) continue;
+
+    let lines: string[];
+    try {
+      lines = fs.readFileSync(file, "utf-8").split("\n");
+    } catch {
+      continue;
     }
-    for (const result of bucket.results ?? []) {
-      const input = (result.input_tokens ?? 0) + (result.input_cached_tokens ?? 0);
-      const output = result.output_tokens ?? 0;
-      dailyMap[date].inputTokens += input;
-      dailyMap[date].outputTokens += output;
 
-      if (result.model_id) {
-        modelCount[result.model_id] = (modelCount[result.model_id] ?? 0) + input + output;
+    // Each session file has a single token_count event with cumulative totals.
+    // We use the last one (most up-to-date for the session).
+    let lastTokenCount: {
+      input_tokens?: number;
+      output_tokens?: number;
+      cached_input_tokens?: number;
+    } | null = null;
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      let record: Record<string, unknown>;
+      try {
+        record = JSON.parse(line);
+      } catch {
+        continue;
+      }
+
+      if (record.type !== "event_msg") continue;
+      const payload = record.payload as Record<string, unknown> | undefined;
+      if (payload?.type !== "token_count") continue;
+
+      const info = payload.info as Record<string, unknown> | undefined;
+      const last = info?.last_token_usage as Record<string, number> | undefined;
+      if (last) {
+        lastTokenCount = {
+          input_tokens: last.input_tokens,
+          output_tokens: last.output_tokens,
+          cached_input_tokens: last.cached_input_tokens,
+        };
       }
     }
-  }
 
-  // OpenAI usage API doesn't return cost directly — compute approximate cost
-  // using rough estimates; users can override with billing API if needed
-  for (const day of Object.values(dailyMap)) {
-    // Average ~$2.50/1M input, ~$10/1M output (GPT-4o approximation)
-    day.costUsd = (day.inputTokens / 1_000_000) * 2.5 + (day.outputTokens / 1_000_000) * 10;
+    if (!lastTokenCount) continue;
+
+    const inputTokens = lastTokenCount.input_tokens ?? 0;
+    const outputTokens = lastTokenCount.output_tokens ?? 0;
+    const cost = calcCost(lastTokenCount, defaultModel);
+
+    if (!dailyMap[fileDate]) {
+      dailyMap[fileDate] = { date: fileDate, inputTokens: 0, outputTokens: 0, costUsd: 0 };
+    }
+    dailyMap[fileDate].inputTokens += inputTokens;
+    dailyMap[fileDate].outputTokens += outputTokens;
+    dailyMap[fileDate].costUsd += cost;
   }
 
   const daily = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
-  const topModel = Object.entries(modelCount).sort((a, b) => b[1] - a[1])[0]?.[0];
 
   return {
     tool: "openai",
-    label: "OpenAI",
+    label: "OpenAI (Codex CLI)",
     configured: true,
     totalInputTokens: daily.reduce((s, d) => s + d.inputTokens, 0),
     totalOutputTokens: daily.reduce((s, d) => s + d.outputTokens, 0),
     totalCostUsd: daily.reduce((s, d) => s + d.costUsd, 0),
-    topModel,
+    topModel: defaultModel,
     daily,
     lastFetchedAt: new Date().toISOString(),
   };
