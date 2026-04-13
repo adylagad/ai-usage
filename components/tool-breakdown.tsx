@@ -43,11 +43,19 @@ function CopilotDetail({ tool }: { tool: ToolSummary }) {
       </p>
     );
   }
-  // Connected but no data available
+  // Connected but GitHub doesn't expose personal Copilot usage via API
   if (tool.ghLogin) {
     return (
       <p className="text-xs text-muted-foreground mt-1">
-        @{tool.ghLogin} · no usage data available
+        @{tool.ghLogin} ·{" "}
+        <a
+          href="https://github.com/settings/billing/premium_request_usage"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-foreground"
+        >
+          view usage on GitHub
+        </a>
       </p>
     );
   }
@@ -107,7 +115,7 @@ export function ToolBreakdown({ tools }: { tools: ToolSummary[] }) {
                       {tool.error}
                     </p>
                   )}
-                  {tool.info && (
+                  {tool.tool !== "copilot" && tool.info && (
                     <p className="text-xs text-muted-foreground mt-1 max-w-[220px]" title={tool.info}>
                       {tool.info}
                     </p>

@@ -156,14 +156,16 @@ export async function fetchSummary(_days: number): Promise<ToolSummary> {
         }
       }
 
-      // Connected but billing data not accessible via this token
+      // Connected but GitHub does not expose personal Copilot usage via API.
+      // The data is only available at github.com/settings/billing — no OAuth
+      // scope exists to read it programmatically for individual accounts.
       return {
         ...base,
         configured: true,
         ghLogin,
         daily: [],
         lastFetchedAt: new Date().toISOString(),
-        info: "Connected as @" + ghLogin + ". Usage data requires a personal Copilot plan or org admin access.",
+        info: "GitHub does not expose personal Copilot usage via API. View your usage at github.com/settings/billing/premium_request_usage",
       };
     }
   }
