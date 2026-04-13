@@ -1,50 +1,31 @@
 # AI Usage Tracker
 
-An open-source self-hosted dashboard to track AI tool usage — tokens, costs, and activity — across Claude Code, OpenAI Codex CLI, and Cursor.
-
-## Features
-
-- **Zero credentials required** for Claude and Codex — data is read directly from local files written by the CLI tools
-- **Unified dashboard**: Total tokens, estimated cost, and per-tool breakdown in one place
-- **Usage charts**: Token usage over time, per tool
-- **Cost estimation**: Calculated from published pricing tables, broken down by model
-- **Local caching**: Results are cached locally (5-minute TTL) to avoid re-reading files on every page load
-- **Self-hosted**: Everything stays on your machine
-
-## How it works
-
-Rather than calling external APIs, the dashboard reads the session files that AI CLI tools already write to your disk:
-
-| Tool | Data source | Credentials needed |
-|---|---|---|
-| Claude Code | `~/.claude/projects/**/*.jsonl` | None |
-| OpenAI Codex CLI | `~/.codex/sessions/**/rollout-*.jsonl` | None |
-| Cursor | Cursor Analytics API | Enterprise API key |
-| GitHub Copilot | GitHub REST API | Org token (enterprise/business only) |
+An open-source self-hosted dashboard to track AI tool usage — tokens, costs, and activity — across Claude Code, OpenAI Codex CLI, GitHub Copilot, and Cursor.
 
 ## Setup
-
-### 1. Clone and install
 
 ```bash
 git clone https://github.com/adylagad/ai-usage.git
 cd ai-usage
-npm install
+npm install && npm run dev
 ```
 
-### 2. Run
+Open [http://localhost:3000](http://localhost:3000). That's it for most users.
 
-```bash
-npm run dev
-```
+## How it works
 
-Open [http://localhost:3000](http://localhost:3000).
+The dashboard reads data that AI tools already write to your machine — no API keys, no accounts, no configuration required for the core tools.
 
-Claude and Codex data will appear automatically if you have either CLI tool installed. No configuration needed.
+| Tool | Data source | What you need |
+|---|---|---|
+| Claude Code | `~/.claude/projects/**/*.jsonl` | Nothing — just use Claude Code |
+| OpenAI Codex CLI | `~/.codex/sessions/**/rollout-*.jsonl` | Nothing — just use Codex CLI |
+| GitHub Copilot | GitHub API via `gh` CLI session | Run `gh auth login` once (most devs already have this) |
+| Cursor | Cursor Analytics API | Enterprise API key |
 
-### 3. Optional: Cursor or Copilot
+## Optional configuration
 
-For Cursor (enterprise) or GitHub Copilot (org/business plan), copy the env file and add your keys:
+Only needed for Cursor enterprise users or GitHub org admins. Copy the example file and fill in what applies to you:
 
 ```bash
 cp .env.local.example .env.local
@@ -52,26 +33,19 @@ cp .env.local.example .env.local
 
 | Variable | Tool | Notes |
 |---|---|---|
-| `CURSOR_API_KEY` | Cursor | Enterprise teams only — Cursor team settings |
-| `GITHUB_TOKEN` + `GITHUB_ORG` | GitHub Copilot | Needs `read:org` scope, org must have Copilot Business/Enterprise |
-
-## Configuration
-
-| Variable | Default | Description |
-|---|---|---|
-| `CACHE_TTL_MINUTES` | `5` | How long to cache parsed results |
-| `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | Change if running on a different port |
+| `CURSOR_API_KEY` | Cursor | Enterprise teams only |
+| `GITHUB_TOKEN` + `GITHUB_ORG` | GitHub Copilot (org) | Overrides `gh` CLI auth; org must have Copilot Business/Enterprise |
 
 ## Tool support
 
-| Tool | Tokens | Cost | Method |
+| Tool | Data | Cost | Notes |
 |---|---|---|---|
-| Claude Code | ✅ | ✅ estimated | Parses `~/.claude/projects/**/*.jsonl` |
-| OpenAI Codex CLI | ✅ | ✅ estimated | Parses `~/.codex/sessions/**/rollout-*.jsonl` |
-| Cursor | Messages only | ❌ | Enterprise API — no local token data |
-| GitHub Copilot | ❌ | ❌ | Org-level API only — suggestions/acceptance rates |
+| Claude Code | Tokens (input/output/cache) | ✅ estimated | From local JSONL session files |
+| OpenAI Codex CLI | Tokens (input/output/cached) | ✅ estimated | From local JSONL session files |
+| GitHub Copilot | Premium requests + billing | ✅ actual | Via `gh auth token`; personal plan only |
+| Cursor | Message counts per model | ❌ | Enterprise API only; no token data locally |
 
-Cost estimates use hardcoded pricing tables (updated April 2026). They reflect list prices and won't account for discounts or credits.
+Cost estimates use hardcoded pricing tables (updated April 2026) and reflect list prices — they won't account for discounts or credits.
 
 ## Contributing
 
