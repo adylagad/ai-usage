@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { fetchSummary } from "@/lib/collectors/copilot";
 import { readCache, writeCache } from "@/lib/cache";
 import { ToolSummary } from "@/lib/types";
@@ -14,8 +12,7 @@ export async function GET(req: NextRequest) {
     if (cached) return NextResponse.json(cached);
   }
 
-  const session = await getServerSession(authOptions);
-  const summary = await fetchSummary(days, session?.accessToken, session?.login);
+  const summary = await fetchSummary(days);
   writeCache("copilot", summary);
   return NextResponse.json(summary);
 }
