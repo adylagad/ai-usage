@@ -7,7 +7,7 @@ import { ToolSummary } from "@/lib/types";
 const TOOLS = [
   "claude",
   "openai",
-  // "copilot", // GitHub Copilot metrics API is org/enterprise only — no personal account support
+  "copilot", // shows personal usage when signed in with GitHub, org metrics if GITHUB_ORG is set
   "cursor",
 ] as const;
 const DAYS = 30;
