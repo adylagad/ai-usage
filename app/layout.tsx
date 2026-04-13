@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
-import { BarChart3 } from "lucide-react";
+import { Activity, BarChart3 } from "lucide-react";
 import Link from "next/link";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
 });
 
@@ -27,38 +27,53 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground">
-        <div className="flex h-screen overflow-hidden">
-          {/* Sidebar */}
-          <aside className="w-56 border-r bg-muted/30 flex flex-col shrink-0">
-            <div className="flex items-center gap-2 px-4 py-5 border-b">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-sm">AI Usage Tracker</span>
+        <div className="relative flex min-h-screen overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_10%_15%,color-mix(in_oklab,var(--brand-blue)_28%,transparent),transparent_42%),radial-gradient(circle_at_85%_20%,color-mix(in_oklab,var(--brand-coral)_20%,transparent),transparent_38%),radial-gradient(circle_at_55%_90%,color-mix(in_oklab,var(--brand-mint)_18%,transparent),transparent_40%)]" />
+
+          <aside className="hidden w-64 shrink-0 border-r border-white/45 bg-white/70 backdrop-blur-xl md:flex md:flex-col">
+            <div className="border-b border-white/60 px-5 py-5">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-[color:var(--brand-blue)]" />
+                <span className="font-semibold tracking-tight">AI Usage Tracker</span>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">Tool analytics command center</p>
             </div>
-            <nav className="flex-1 px-2 py-4 space-y-1">
+            <nav className="flex-1 space-y-2 px-3 py-4">
               <Link
                 href="/dashboard"
-                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+                className="flex items-center gap-2 rounded-md border border-transparent px-3 py-2 text-sm font-medium transition-colors hover:border-[color:var(--brand-blue)]/20 hover:bg-[color:var(--brand-blue)]/10 hover:text-foreground"
               >
+                <Activity className="h-4 w-4 text-[color:var(--brand-blue)]" />
                 Dashboard
               </Link>
             </nav>
-            <div className="px-4 py-3 border-t text-xs text-muted-foreground">
+            <div className="border-t border-white/60 px-4 py-3 text-xs text-muted-foreground">
               <a
                 href="https://github.com/adylagad/ai-usage"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:underline"
+                className="hover:text-foreground hover:underline"
               >
                 View on GitHub
               </a>
             </div>
           </aside>
 
-          {/* Main content */}
-          <main className="flex-1 overflow-auto p-6">{children}</main>
+          <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8">
+            <div className="mx-auto max-w-7xl">
+              <div className="mb-5 rounded-2xl border border-white/70 bg-white/75 p-4 shadow-sm backdrop-blur md:hidden">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-[color:var(--brand-blue)]" />
+                  <span className="font-semibold tracking-tight">AI Usage Tracker</span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">Dashboard</p>
+              </div>
+              {children}
+            </div>
+          </main>
         </div>
       </body>
     </html>

@@ -1,14 +1,17 @@
 "use client";
 
 import {
-  LineChart,
+  Area,
+  AreaChart,
+  Bar,
+  ComposedChart,
+  Legend,
   Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
-  ResponsiveContainer,
+  ResponsiveContainer
 } from "recharts";
 import { ToolSummary, ToolId } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -32,7 +35,6 @@ function fmt(n: number): string {
 }
 
 export function UsageChart({ tools }: { tools: ToolSummary[] }) {
-  // Collect all unique dates across tools
   const dateSet = new Set<string>();
   for (const tool of tools) {
     for (const d of tool.daily) dateSet.add(d.date);
@@ -43,7 +45,7 @@ export function UsageChart({ tools }: { tools: ToolSummary[] }) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Tokens Over Time</CardTitle>
+          <CardTitle>Usage Trends</CardTitle>
           <CardDescription>No usage data available yet</CardDescription>
         </CardHeader>
         <CardContent className="h-64 flex items-center justify-center text-muted-foreground text-sm">
@@ -55,55 +57,114 @@ export function UsageChart({ tools }: { tools: ToolSummary[] }) {
 
   const chartData: ChartDataPoint[] = dates.map((date) => {
     const point: ChartDataPoint = { date };
+    let totalTokens = 0;
+    let totalCost = 0;
+
     for (const tool of tools) {
       if (!tool.configured) continue;
       const bucket = tool.daily.find((d) => d.date === date);
       const tokens = (bucket?.inputTokens ?? 0) + (bucket?.outputTokens ?? 0);
       point[tool.tool] = tokens;
+      totalTokens += tokens;
+      totalCost += bucket?.costUsd ?? 0;
     }
+    point.totalTokens = totalTokens;
+    point.totalCost = totalCost;
     return point;
   });
 
   const activeTools = tools.filter((t) => t.configured && t.daily.length > 0);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Tokens Over Time</CardTitle>
-        <CardDescription>Daily token usage per tool</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-            <XAxis
-              dataKey="date"
-              tick={{ fontSize: 11 }}
-              tickFormatter={(v: string) => v.slice(5)} // MM-DD
-            />
-            <YAxis tickFormatter={fmt} tick={{ fontSize: 11 }} width={48} />
-            <Tooltip
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              formatter={(value: any) => [fmt(Number(value ?? 0)), ""]}
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              labelFormatter={(label: any) => `Date: ${label}`}
-            />
-            <Legend />
-            {activeTools.map((tool) => (
-              <Line
-                key={tool.tool}
-                type="monotone"
-                dataKey={tool.tool}
-                name={tool.label}
-                stroke={TOOL_COLORS[tool.tool]}
-                strokeWidth={2}
-                dot={false}
-                connectNulls
+    <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
+      <Card className="border-white/65 bg-white/85 shadow-sm">
+        <CardHeader>
+          <CardTitle>Token Velocity</CardTitle>
+          <CardDescription>Daily token usage per tool and combined demand</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={320}>
+            <ComposedChart data={chartData}>
+              <defs>
+                <linearGradient id="totalTokensFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--brand-blue)" stopOpacity={0.22} />
+                  <stop offset="95%" stopColor="var(--brand-blue)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 11 }}
+                tickFormatter={(v: string) => v.slice(5)}
               />
-            ))}
-          </LineChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
+              <YAxis tickFormatter={fmt} tick={{ fontSize: 11 }} width={52} />
+              <Tooltip
+                formatter={(value, name) => [
+                  fmt(Number(Array.isArray(value) ? value[0] : (value ?? 0))),
+                  name === "totalTokens" ? "Total" : String(name),
+                ]}
+                labelFormatter={(label) => `Date: ${String(label)}`}
+              />
+              <Legend />
+              <Area
+                type="monotone"
+                dataKey="totalTokens"
+                name="Total Tokens"
+                stroke="var(--brand-blue)"
+                strokeWidth={2}
+                fill="url(#totalTokensFill)"
+              />
+              {activeTools.map((tool) => (
+                <Line
+                  key={tool.tool}
+                  type="monotone"
+                  dataKey={tool.tool}
+                  name={tool.label}
+                  stroke={TOOL_COLORS[tool.tool]}
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
+                />
+              ))}
+            </ComposedChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      <Card className="border-white/65 bg-white/85 shadow-sm">
+        <CardHeader>
+          <CardTitle>Daily Cost Pulse</CardTitle>
+          <CardDescription>Estimated spend trend for the selected window</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={320}>
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="costFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--brand-coral)" stopOpacity={0.34} />
+                  <stop offset="95%" stopColor="var(--brand-coral)" stopOpacity={0.05} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 11 }}
+                tickFormatter={(v: string) => v.slice(5)}
+              />
+              <YAxis tick={{ fontSize: 11 }} width={48} tickFormatter={(v) => `$${Number(v).toFixed(2)}`} />
+              <Tooltip
+                formatter={(value) => [
+                  `$${Number(Array.isArray(value) ? value[0] : (value ?? 0)).toFixed(2)}`,
+                  "Daily cost",
+                ]}
+                labelFormatter={(label) => `Date: ${String(label)}`}
+              />
+              <Bar dataKey="totalCost" fill="color-mix(in oklab, var(--brand-coral) 70%, white)" radius={[6, 6, 0, 0]} />
+              <Area type="monotone" dataKey="totalCost" stroke="var(--brand-coral)" strokeWidth={2} fill="url(#costFill)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

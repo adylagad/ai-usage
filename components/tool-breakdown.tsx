@@ -64,10 +64,10 @@ function CopilotDetail({ tool }: { tool: ToolSummary }) {
 
 export function ToolBreakdown({ tools }: { tools: ToolSummary[] }) {
   return (
-    <Card>
+    <Card className="border-white/65 bg-white/85 shadow-sm">
       <CardHeader>
         <CardTitle>Tool Breakdown</CardTitle>
-        <CardDescription>Usage summary per AI tool</CardDescription>
+        <CardDescription>Usage summary, coverage, and reliability per AI tool</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
@@ -76,53 +76,67 @@ export function ToolBreakdown({ tools }: { tools: ToolSummary[] }) {
               <TableHead>Tool</TableHead>
               <TableHead className="text-right">Input Tokens</TableHead>
               <TableHead className="text-right">Output Tokens</TableHead>
+              <TableHead className="text-right">Active Days</TableHead>
+              <TableHead className="text-right">Avg / Day</TableHead>
               <TableHead className="text-right">Est. Cost</TableHead>
               <TableHead>Top Model</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tools.map((tool) => (
-              <TableRow key={tool.tool}>
-                <TableCell className="font-medium">{tool.label}</TableCell>
-                <TableCell className="text-right font-mono text-sm">
-                  {tool.tool === "copilot" ? "—" : tool.configured && !tool.error ? fmt(tool.totalInputTokens) : "—"}
-                </TableCell>
-                <TableCell className="text-right font-mono text-sm">
-                  {tool.configured && !tool.error
-                    ? tool.tool === "copilot"
-                      ? "—"
-                      : tool.tool === "cursor"
-                        ? `${fmt(tool.totalOutputTokens)} msgs`
-                        : fmt(tool.totalOutputTokens)
-                    : "—"}
-                </TableCell>
-                <TableCell className="text-right font-mono text-sm">
-                  {tool.tool === "copilot"
-                    ? tool.totalCostUsd > 0 ? fmtCost(tool.totalCostUsd) : "—"
-                    : tool.configured && !tool.error ? fmtCost(tool.totalCostUsd) : "—"}
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground max-w-[160px] truncate">
-                  {tool.topModel ?? "—"}
-                </TableCell>
-                <TableCell>
-                  <ToolStatusBadge summary={tool} />
-                  {tool.tool === "copilot" && tool.configured && (
-                    <CopilotDetail tool={tool} />
-                  )}
-                  {tool.tool !== "copilot" && tool.error && (
-                    <p className="text-xs text-destructive mt-1 max-w-[200px] truncate" title={tool.error}>
-                      {tool.error}
-                    </p>
-                  )}
-                  {tool.tool !== "copilot" && tool.info && (
-                    <p className="text-xs text-muted-foreground mt-1 max-w-[220px]" title={tool.info}>
-                      {tool.info}
-                    </p>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
+            {tools.map((tool) => {
+              const tokens = tool.totalInputTokens + tool.totalOutputTokens;
+              const activeDays = tool.daily.filter((day) => day.inputTokens + day.outputTokens > 0).length;
+              const avgPerDay = activeDays > 0 ? Math.round(tokens / activeDays) : 0;
+
+              return (
+                <TableRow key={tool.tool}>
+                  <TableCell className="font-medium">{tool.label}</TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {tool.tool === "copilot" ? "—" : tool.configured && !tool.error ? fmt(tool.totalInputTokens) : "—"}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {tool.configured && !tool.error
+                      ? tool.tool === "copilot"
+                        ? "—"
+                        : tool.tool === "cursor"
+                          ? `${fmt(tool.totalOutputTokens)} msgs`
+                          : fmt(tool.totalOutputTokens)
+                      : "—"}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {tool.configured && !tool.error ? activeDays : "—"}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {tool.configured && !tool.error ? fmt(avgPerDay) : "—"}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {tool.tool === "copilot"
+                      ? tool.totalCostUsd > 0 ? fmtCost(tool.totalCostUsd) : "—"
+                      : tool.configured && !tool.error ? fmtCost(tool.totalCostUsd) : "—"}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground max-w-[160px] truncate">
+                    {tool.topModel ?? "—"}
+                  </TableCell>
+                  <TableCell>
+                    <ToolStatusBadge summary={tool} />
+                    {tool.tool === "copilot" && tool.configured && (
+                      <CopilotDetail tool={tool} />
+                    )}
+                    {tool.tool !== "copilot" && tool.error && (
+                      <p className="text-xs text-destructive mt-1 max-w-[200px] truncate" title={tool.error}>
+                        {tool.error}
+                      </p>
+                    )}
+                    {tool.tool !== "copilot" && tool.info && (
+                      <p className="text-xs text-muted-foreground mt-1 max-w-[220px]" title={tool.info}>
+                        {tool.info}
+                      </p>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </CardContent>
