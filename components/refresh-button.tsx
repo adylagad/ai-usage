@@ -25,7 +25,7 @@ export function RefreshButton() {
       size="sm"
       onClick={handleRefresh}
       disabled={loading}
-      className="border-white/80 bg-white/70 hover:bg-white"
+      className="border-border bg-muted/50 hover:bg-muted"
     >
       <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
       {loading ? "Refreshing…" : "Refresh"}

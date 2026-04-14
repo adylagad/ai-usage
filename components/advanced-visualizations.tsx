@@ -72,7 +72,7 @@ export function AdvancedVisualizations({ tools }: { tools: ToolSummary[] }) {
 
   if (toolShareData.length === 0 && costByToolData.length === 0 && activityDays.length === 0) {
     return (
-      <Card className="border-white/65 bg-white/85 shadow-sm">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle>More Visualizations</CardTitle>
           <CardDescription>No tool data yet. Connect at least one provider to unlock chart insights.</CardDescription>
@@ -83,7 +83,7 @@ export function AdvancedVisualizations({ tools }: { tools: ToolSummary[] }) {
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
-      <Card className="border-white/65 bg-white/85 shadow-sm">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle>Token Share</CardTitle>
           <CardDescription>How token usage is distributed by tool</CardDescription>
@@ -127,7 +127,7 @@ export function AdvancedVisualizations({ tools }: { tools: ToolSummary[] }) {
         </CardContent>
       </Card>
 
-      <Card className="border-white/65 bg-white/85 shadow-sm">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle>Cost By Tool</CardTitle>
           <CardDescription>Estimated spend concentration across providers</CardDescription>
@@ -157,7 +157,7 @@ export function AdvancedVisualizations({ tools }: { tools: ToolSummary[] }) {
         </CardContent>
       </Card>
 
-      <Card className="border-white/65 bg-white/85 shadow-sm">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle>Activity Heatmap</CardTitle>
           <CardDescription>30-day intensity of combined token activity</CardDescription>

@@ -77,7 +77,7 @@ export function UsageChart({ tools }: { tools: ToolSummary[] }) {
 
   return (
     <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
-      <Card className="border-white/65 bg-white/85 shadow-sm">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle>Token Velocity</CardTitle>
           <CardDescription>Daily token usage per tool and combined demand</CardDescription>
@@ -85,12 +85,6 @@ export function UsageChart({ tools }: { tools: ToolSummary[] }) {
         <CardContent>
           <ResponsiveContainer width="100%" height={320}>
             <ComposedChart data={chartData}>
-              <defs>
-                <linearGradient id="totalTokensFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--brand-blue)" stopOpacity={0.22} />
-                  <stop offset="95%" stopColor="var(--brand-blue)" stopOpacity={0} />
-                </linearGradient>
-              </defs>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis
                 dataKey="date"
@@ -112,7 +106,7 @@ export function UsageChart({ tools }: { tools: ToolSummary[] }) {
                 name="Total Tokens"
                 stroke="var(--brand-blue)"
                 strokeWidth={2}
-                fill="url(#totalTokensFill)"
+                fill="color-mix(in oklab, var(--brand-blue) 28%, transparent)"
               />
               {activeTools.map((tool) => (
                 <Line
@@ -131,7 +125,7 @@ export function UsageChart({ tools }: { tools: ToolSummary[] }) {
         </CardContent>
       </Card>
 
-      <Card className="border-white/65 bg-white/85 shadow-sm">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle>Daily Cost Pulse</CardTitle>
           <CardDescription>Estimated spend trend for the selected window</CardDescription>
@@ -139,12 +133,6 @@ export function UsageChart({ tools }: { tools: ToolSummary[] }) {
         <CardContent>
           <ResponsiveContainer width="100%" height={320}>
             <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="costFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--brand-coral)" stopOpacity={0.34} />
-                  <stop offset="95%" stopColor="var(--brand-coral)" stopOpacity={0.05} />
-                </linearGradient>
-              </defs>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis
                 dataKey="date"
@@ -160,7 +148,13 @@ export function UsageChart({ tools }: { tools: ToolSummary[] }) {
                 labelFormatter={(label) => `Date: ${String(label)}`}
               />
               <Bar dataKey="totalCost" fill="color-mix(in oklab, var(--brand-coral) 70%, white)" radius={[6, 6, 0, 0]} />
-              <Area type="monotone" dataKey="totalCost" stroke="var(--brand-coral)" strokeWidth={2} fill="url(#costFill)" />
+              <Area
+                type="monotone"
+                dataKey="totalCost"
+                stroke="var(--brand-coral)"
+                strokeWidth={2}
+                fill="color-mix(in oklab, var(--brand-coral) 28%, transparent)"
+              />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>

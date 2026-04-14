@@ -27,14 +27,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`dark ${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground">
-        <div className="relative flex min-h-screen overflow-hidden">
-          <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_10%_15%,color-mix(in_oklab,var(--brand-blue)_28%,transparent),transparent_42%),radial-gradient(circle_at_85%_20%,color-mix(in_oklab,var(--brand-coral)_20%,transparent),transparent_38%),radial-gradient(circle_at_55%_90%,color-mix(in_oklab,var(--brand-mint)_18%,transparent),transparent_40%)]" />
-
-          <aside className="hidden w-64 shrink-0 border-r border-white/45 bg-white/70 backdrop-blur-xl md:flex md:flex-col">
-            <div className="border-b border-white/60 px-5 py-5">
+        <div className="flex min-h-screen overflow-hidden">
+          <aside className="hidden w-64 shrink-0 border-r border-border bg-sidebar md:flex md:flex-col">
+            <div className="border-b border-border px-5 py-5">
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 text-[color:var(--brand-blue)]" />
                 <span className="font-semibold tracking-tight">AI Usage Tracker</span>
@@ -44,13 +42,13 @@ export default function RootLayout({
             <nav className="flex-1 space-y-2 px-3 py-4">
               <Link
                 href="/dashboard"
-                className="flex items-center gap-2 rounded-md border border-transparent px-3 py-2 text-sm font-medium transition-colors hover:border-[color:var(--brand-blue)]/20 hover:bg-[color:var(--brand-blue)]/10 hover:text-foreground"
+                className="flex items-center gap-2 rounded-md border border-transparent px-3 py-2 text-sm font-medium transition-colors hover:border-border hover:bg-accent hover:text-foreground"
               >
                 <Activity className="h-4 w-4 text-[color:var(--brand-blue)]" />
                 Dashboard
               </Link>
             </nav>
-            <div className="border-t border-white/60 px-4 py-3 text-xs text-muted-foreground">
+            <div className="border-t border-border px-4 py-3 text-xs text-muted-foreground">
               <a
                 href="https://github.com/adylagad/ai-usage"
                 target="_blank"
@@ -64,7 +62,7 @@ export default function RootLayout({
 
           <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8">
             <div className="mx-auto max-w-7xl">
-              <div className="mb-5 rounded-2xl border border-white/70 bg-white/75 p-4 shadow-sm backdrop-blur md:hidden">
+              <div className="mb-5 rounded-2xl border border-border bg-card p-4 md:hidden">
                 <div className="flex items-center gap-2">
                   <BarChart3 className="h-5 w-5 text-[color:var(--brand-blue)]" />
                   <span className="font-semibold tracking-tight">AI Usage Tracker</span>

@@ -64,7 +64,7 @@ function CopilotDetail({ tool }: { tool: ToolSummary }) {
 
 export function ToolBreakdown({ tools }: { tools: ToolSummary[] }) {
   return (
-    <Card className="border-white/65 bg-white/85 shadow-sm">
+    <Card className="border-border bg-card">
       <CardHeader>
         <CardTitle>Tool Breakdown</CardTitle>
         <CardDescription>Usage summary, coverage, and reliability per AI tool</CardDescription>
