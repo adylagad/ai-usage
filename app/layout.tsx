@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { JetBrains_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 import { Activity, BarChart3 } from "lucide-react";
 import Link from "next/link";
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
 });
 
@@ -27,7 +27,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`dark ${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`dark ${manrope.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground">
         <div className="flex min-h-screen overflow-hidden">
@@ -42,7 +42,7 @@ export default function RootLayout({
             <nav className="flex-1 space-y-2 px-3 py-4">
               <Link
                 href="/dashboard"
-                className="flex items-center gap-2 rounded-md border border-transparent px-3 py-2 text-sm font-medium transition-colors hover:border-border hover:bg-accent hover:text-foreground"
+                className="flex items-center gap-2 rounded-md border border-transparent px-3 py-2 text-sm font-medium text-foreground transition-colors hover:border-border hover:bg-accent hover:text-accent-foreground"
               >
                 <Activity className="h-4 w-4 text-[color:var(--brand-blue)]" />
                 Dashboard

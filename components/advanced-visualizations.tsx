@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import {
   Bar,
   BarChart,
@@ -22,27 +23,43 @@ const TOOL_COLORS: Record<ToolId, string> = {
   cursor: "#ec4899",
 };
 
+const TOOL_SHORT_LABELS: Record<ToolId, string> = {
+  claude: "Claude",
+  openai: "OpenAI",
+  copilot: "Copilot",
+  cursor: "Cursor",
+};
+
 function fmt(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return n.toString();
 }
 
-function intensityClass(value: number, max: number): string {
-  if (max === 0 || value === 0) return "bg-muted/40";
-  const ratio = value / max;
-  if (ratio >= 0.8) return "bg-[color:var(--brand-blue)]";
-  if (ratio >= 0.55) return "bg-[color:var(--brand-blue)]/75";
-  if (ratio >= 0.3) return "bg-[color:var(--brand-blue)]/50";
-  return "bg-[color:var(--brand-blue)]/30";
-}
+const tooltipContentStyle: CSSProperties = {
+  backgroundColor: "var(--card)",
+  border: "1px solid var(--border)",
+  borderRadius: "12px",
+  color: "var(--foreground)",
+  boxShadow: "none",
+  fontFamily: "var(--font-sans)",
+};
+
+const tooltipLabelStyle: CSSProperties = {
+  color: "var(--foreground)",
+  fontWeight: 600,
+};
+
+const tooltipItemStyle: CSSProperties = {
+  color: "var(--foreground)",
+};
 
 export function AdvancedVisualizations({ tools }: { tools: ToolSummary[] }) {
   const configuredTools = tools.filter((tool) => tool.configured);
 
   const toolShareData = configuredTools
     .map((tool) => ({
-      name: tool.label,
+      name: TOOL_SHORT_LABELS[tool.tool],
       value: tool.totalInputTokens + tool.totalOutputTokens,
       color: TOOL_COLORS[tool.tool],
     }))
@@ -50,27 +67,15 @@ export function AdvancedVisualizations({ tools }: { tools: ToolSummary[] }) {
 
   const costByToolData = configuredTools
     .map((tool) => ({
-      name: tool.label,
+      name: TOOL_SHORT_LABELS[tool.tool],
+      fullName: tool.label,
       cost: Number(tool.totalCostUsd.toFixed(2)),
       color: TOOL_COLORS[tool.tool],
     }))
+    .filter((entry) => entry.cost > 0)
     .sort((a, b) => b.cost - a.cost);
 
-  const dayTotals = new Map<string, number>();
-  for (const tool of configuredTools) {
-    for (const day of tool.daily) {
-      dayTotals.set(day.date, (dayTotals.get(day.date) ?? 0) + day.inputTokens + day.outputTokens);
-    }
-  }
-
-  const activityDays = Array.from(dayTotals.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .slice(-30)
-    .map(([date, tokens]) => ({ date, tokens }));
-
-  const maxDayTokens = Math.max(...activityDays.map((d) => d.tokens), 0);
-
-  if (toolShareData.length === 0 && costByToolData.length === 0 && activityDays.length === 0) {
+  if (toolShareData.length === 0 && costByToolData.length === 0) {
     return (
       <Card className="border-border bg-card">
         <CardHeader>
@@ -82,7 +87,7 @@ export function AdvancedVisualizations({ tools }: { tools: ToolSummary[] }) {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
+    <div className="grid gap-4 lg:grid-cols-2">
       <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle>Token Share</CardTitle>
@@ -106,6 +111,9 @@ export function AdvancedVisualizations({ tools }: { tools: ToolSummary[] }) {
                 ))}
               </Pie>
               <Tooltip
+                contentStyle={tooltipContentStyle}
+                labelStyle={tooltipLabelStyle}
+                itemStyle={tooltipItemStyle}
                 formatter={(value) => [
                   fmt(Number(Array.isArray(value) ? value[0] : (value ?? 0))),
                   "Tokens",
@@ -136,12 +144,16 @@ export function AdvancedVisualizations({ tools }: { tools: ToolSummary[] }) {
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={costByToolData} layout="vertical" margin={{ left: 6, right: 8 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis type="number" tickFormatter={(v) => `$${Number(v).toFixed(1)}`} />
-              <YAxis dataKey="name" type="category" width={58} tick={{ fontSize: 12 }} />
+              <XAxis type="number" tick={{ fill: "var(--muted-foreground)" }} tickFormatter={(v) => `$${Number(v).toFixed(1)}`} />
+              <YAxis dataKey="name" type="category" width={92} tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} />
               <Tooltip
-                formatter={(value) => [
+                contentStyle={tooltipContentStyle}
+                labelStyle={tooltipLabelStyle}
+                itemStyle={tooltipItemStyle}
+                cursor={false}
+                formatter={(value, _name, item) => [
                   `$${Number(Array.isArray(value) ? value[0] : (value ?? 0)).toFixed(2)}`,
-                  "Cost",
+                  `Cost (${String(item?.payload?.fullName ?? item?.payload?.name ?? "Tool")})`,
                 ]}
               />
               <Bar dataKey="cost" radius={[0, 6, 6, 0]}>
@@ -154,28 +166,6 @@ export function AdvancedVisualizations({ tools }: { tools: ToolSummary[] }) {
           <p className="mt-3 text-xs text-muted-foreground">
             Highest estimated cost: <span className="font-medium text-foreground">{costByToolData[0]?.name ?? "—"}</span>
           </p>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border bg-card">
-        <CardHeader>
-          <CardTitle>Activity Heatmap</CardTitle>
-          <CardDescription>30-day intensity of combined token activity</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-6 gap-1.5">
-            {activityDays.map((day) => (
-              <div
-                key={day.date}
-                className={`aspect-square rounded-md ${intensityClass(day.tokens, maxDayTokens)}`}
-                title={`${day.date}: ${fmt(day.tokens)} tokens`}
-              />
-            ))}
-          </div>
-          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-            <span>{activityDays[0]?.date ?? "—"}</span>
-            <span>High activity</span>
-          </div>
         </CardContent>
       </Card>
     </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import {
   Area,
   AreaChart,
@@ -34,6 +35,24 @@ function fmt(n: number): string {
   return n.toString();
 }
 
+const tooltipContentStyle: CSSProperties = {
+  backgroundColor: "var(--card)",
+  border: "1px solid var(--border)",
+  borderRadius: "12px",
+  color: "var(--foreground)",
+  boxShadow: "none",
+  fontFamily: "var(--font-sans)",
+};
+
+const tooltipLabelStyle: CSSProperties = {
+  color: "var(--foreground)",
+  fontWeight: 600,
+};
+
+const tooltipItemStyle: CSSProperties = {
+  color: "var(--foreground)",
+};
+
 export function UsageChart({ tools }: { tools: ToolSummary[] }) {
   const dateSet = new Set<string>();
   for (const tool of tools) {
@@ -64,7 +83,7 @@ export function UsageChart({ tools }: { tools: ToolSummary[] }) {
       if (!tool.configured) continue;
       const bucket = tool.daily.find((d) => d.date === date);
       const tokens = (bucket?.inputTokens ?? 0) + (bucket?.outputTokens ?? 0);
-      point[tool.tool] = tokens;
+      if (tokens > 0) point[tool.tool] = tokens;
       totalTokens += tokens;
       totalCost += bucket?.costUsd ?? 0;
     }
@@ -88,15 +107,20 @@ export function UsageChart({ tools }: { tools: ToolSummary[] }) {
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                 tickFormatter={(v: string) => v.slice(5)}
               />
-              <YAxis tickFormatter={fmt} tick={{ fontSize: 11 }} width={52} />
+              <YAxis tickFormatter={fmt} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} width={52} />
               <Tooltip
-                formatter={(value, name) => [
-                  fmt(Number(Array.isArray(value) ? value[0] : (value ?? 0))),
-                  name === "totalTokens" ? "Total" : String(name),
-                ]}
+                contentStyle={tooltipContentStyle}
+                labelStyle={tooltipLabelStyle}
+                itemStyle={tooltipItemStyle}
+                cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "3 3" }}
+                formatter={(value, name) => {
+                  const numeric = Number(Array.isArray(value) ? value[0] : (value ?? 0));
+                  if (name !== "totalTokens" && numeric <= 0) return null;
+                  return [fmt(numeric), name === "totalTokens" ? "Total Tokens" : String(name)];
+                }}
                 labelFormatter={(label) => `Date: ${String(label)}`}
               />
               <Legend />
@@ -136,11 +160,15 @@ export function UsageChart({ tools }: { tools: ToolSummary[] }) {
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                 tickFormatter={(v: string) => v.slice(5)}
               />
-              <YAxis tick={{ fontSize: 11 }} width={48} tickFormatter={(v) => `$${Number(v).toFixed(2)}`} />
+              <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} width={48} tickFormatter={(v) => `$${Number(v).toFixed(2)}`} />
               <Tooltip
+                contentStyle={tooltipContentStyle}
+                labelStyle={tooltipLabelStyle}
+                itemStyle={tooltipItemStyle}
+                cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "3 3" }}
                 formatter={(value) => [
                   `$${Number(Array.isArray(value) ? value[0] : (value ?? 0)).toFixed(2)}`,
                   "Daily cost",

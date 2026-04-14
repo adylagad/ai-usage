@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToolSummary } from "@/lib/types";
-import { Activity, CalendarRange, Coins, DollarSign, Plug, TrendingUp } from "lucide-react";
+import { Activity, Coins, DollarSign, TrendingUp } from "lucide-react";
 
 function fmt(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -14,8 +14,6 @@ export function OverviewCards({ tools }: { tools: ToolSummary[] }) {
     0
   );
   const totalCost = tools.reduce((s, t) => s + t.totalCostUsd, 0);
-  const configured = tools.filter((t) => t.configured).length;
-  const connected = tools.filter((t) => t.configured && !t.error).length;
   const dailyTotals = new Map<string, number>();
 
   for (const tool of tools) {
@@ -29,7 +27,6 @@ export function OverviewCards({ tools }: { tools: ToolSummary[] }) {
   const avgDailyTokens = activeDays > 0 ? Math.round(totalTokens / activeDays) : 0;
   const peakDay = Array.from(dailyTotals.entries()).sort((a, b) => b[1] - a[1])[0];
   const peakDayLabel = peakDay ? `${peakDay[0]} · ${fmt(peakDay[1])}` : "No usage yet";
-  const connectionRate = configured > 0 ? Math.round((connected / configured) * 100) : 0;
 
   const cards = [
     {
@@ -56,22 +53,10 @@ export function OverviewCards({ tools }: { tools: ToolSummary[] }) {
       sub: peakDayLabel,
       icon: TrendingUp,
     },
-    {
-      title: "Active Days",
-      value: activeDays.toString(),
-      sub: activeDays > 0 ? "Days with tracked usage" : "No historical activity yet",
-      icon: CalendarRange,
-    },
-    {
-      title: "Connection Health",
-      value: `${connectionRate}%`,
-      sub: configured > 0 ? `${connected}/${configured} tools connected` : "No tools configured yet",
-      icon: Plug,
-    },
   ];
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {cards.map((card) => (
         <Card
           key={card.title}
