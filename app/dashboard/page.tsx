@@ -5,6 +5,8 @@ import { RefreshButton } from "@/components/refresh-button";
 import { AdvancedVisualizations } from "@/components/advanced-visualizations";
 import { ToolSummary } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 const TOOLS = [
   "claude",
   "openai",
